@@ -1,0 +1,24 @@
+{
+  "name": "respira",
+  "version": "1.0.0",
+  "description": "PWA di breathwork scientifico — due minuti, un respiro, tutto il resto può aspettare.",
+  "homepage": "https://TUO-USERNAME.github.io/respira",
+  "private": true,
+  "scripts": {
+    "start":          "npx serve . -l 3000",
+    "dev":            "npx serve . -l 3000 --no-clipboard",
+    "generate-icons": "node generate-icons.js",
+    "lint":           "npx eslint app.js",
+    "deploy":         "echo 'Push to main → GitHub Pages deploys automatically via gh-pages action'"
+  },
+  "devDependencies": {
+    "sharp": "^0.33.0",
+    "serve": "^14.2.0"
+  },
+  "keywords": ["pwa", "breathwork", "wellness", "stress", "breathing"],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
