@@ -8,128 +8,507 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Respira">
 <meta name="description" content="Respira — due minuti. Un respiro. Tutto il resto può aspettare.">
-<meta name="mobile-web-app-capable" content="yes">
-
-<!-- PWA Manifest -->
 <link rel="manifest" href="manifest.json">
-
-<!-- Apple Touch Icons -->
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
-<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
-<link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png">
-
-<!-- Favicon -->
 <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png">
-
-<!-- Splash screens iOS -->
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
 <title>Respira</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #1a1209; color: #f5ede0; font-family: Georgia, serif; }
+
+/* Container fisso */
+#app { width: 100%; min-height: 600px; position: relative; overflow: hidden; }
+
+/* Canvas dietro tutto */
+#bg { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+
+/* Schermate: NON position:absolute, display:flex/none semplice */
+.screen {
+  width: 100%; min-height: 600px;
+  display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  padding: 32px 20px 80px;
+  text-align: center;
+  position: relative; z-index: 1;
+}
+.screen.on { display: flex; }
+
+/* HOME */
+.logo { font-family: monospace; font-size: 11px; letter-spacing: .35em; color: #c4845a; text-transform: uppercase; margin-bottom: 8px; }
+h1 { font-size: 72px; font-weight: 300; font-style: italic; line-height: .9; margin-bottom: 20px; }
+.sub { font-size: 16px; font-style: italic; color: #e8c4a0; line-height: 1.65; margin-bottom: 40px; }
+
+.cards { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 440px; }
+.card {
+  flex: 1; min-width: 128px;
+  background: rgba(245,237,224,.07); border: 1px solid rgba(245,237,224,.13);
+  border-radius: 4px; padding: 14px 16px; text-align: left; cursor: pointer;
+  transition: background .2s, transform .15s;
+}
+.card:hover { background: rgba(196,132,90,.18); transform: translateY(-2px); }
+.cn { font-family: monospace; font-size: 9px; letter-spacing: .28em; text-transform: uppercase; color: #c4845a; margin-bottom: 4px; }
+.cd { font-size: 14px; font-style: italic; margin-bottom: 6px; }
+.ct { font-family: monospace; font-size: 9px; color: #b8c9d4; }
+
+/* BREATH */
+.bhead { margin-bottom: 24px; }
+.btname { font-family: monospace; font-size: 10px; letter-spacing: .3em; text-transform: uppercase; color: #c4845a; margin-bottom: 4px; }
+.brinfo { font-size: 13px; font-style: italic; color: #e8c4a0; opacity: .7; }
+
+/* Cerchio */
+.cw { position: relative; width: 230px; height: 230px; margin-bottom: 32px; cursor: pointer; flex-shrink: 0; }
+.cring { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(245,237,224,.14); }
+.csvg { position: absolute; inset: -8px; width: calc(100% + 16px); height: calc(100% + 16px); transform: rotate(-90deg); pointer-events: none; }
+.ctrack { fill: none; stroke: rgba(245,237,224,.06); stroke-width: 2; }
+.carc   { fill: none; stroke: #c4845a; stroke-width: 2.5; stroke-linecap: round; transition: stroke .7s; }
+.cglow  { position: absolute; inset: -18px; border-radius: 50%; pointer-events: none; transition: background 1.8s; }
+.ci {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(ellipse at 42% 36%, rgba(196,132,90,.1), rgba(26,18,9,.45) 68%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: transform 3.6s cubic-bezier(.45,.05,.55,.95);
+}
+.ci.inhale { transform: scale(1.19); }
+.ci.exhale { transform: scale(.87); }
+.ci.hold, .ci.hold2 { transform: scale(1.1); }
+
+.pring { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(196,132,90,.4); animation: pr 2.2s ease-out infinite; }
+@keyframes pr { 0%{transform:scale(1);opacity:.4} 100%{transform:scale(1.13);opacity:0} }
+
+.bphase { font-size: 26px; font-style: italic; font-weight: 300; margin-bottom: 2px; }
+.bcount { font-family: monospace; font-size: 48px; font-weight: 300; line-height: 1; }
+.bunit  { font-family: monospace; font-size: 9px; letter-spacing: .2em; color: #b8c9d4; margin-top: 4px; }
+
+.ctrls { display: flex; gap: 12px; }
+
+/* Bottoni */
+.bgh {
+  background: none; border: 1px solid rgba(245,237,224,.25); color: #f5ede0;
+  font-family: monospace; font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
+  padding: 11px 20px; border-radius: 2px; cursor: pointer; transition: all .2s;
+}
+.bgh:hover { background: rgba(245,237,224,.1); }
+.bpr {
+  background: #c4845a; border: none; color: #faf4ec;
+  font-family: monospace; font-size: 10px; letter-spacing: .26em; text-transform: uppercase;
+  padding: 11px 26px; border-radius: 2px; cursor: pointer; transition: all .2s;
+}
+.bpr:hover { background: #d4603a; }
+
+/* COMPLETE */
+.dstar { font-size: 42px; margin-bottom: 18px; }
+.dtitle { font-size: 52px; font-weight: 300; font-style: italic; margin-bottom: 12px; }
+.dmsg { font-size: 15px; font-style: italic; color: #e8c4a0; max-width: 260px; line-height: 1.7; margin-bottom: 12px; }
+.dsci { font-family: monospace; font-size: 9px; letter-spacing: .1em; color: #b8c9d4; max-width: 280px; line-height: 1.6; margin-bottom: 30px; opacity: .75; }
+.dacts { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+/* Stats bar */
+.sbar {
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 18px; align-items: center;
+  background: rgba(26,18,9,.7); border: 1px solid rgba(245,237,224,.09);
+  border-radius: 100px; padding: 8px 22px; z-index: 2;
+}
+.sv { font-family: monospace; font-size: 13px; display: block; text-align: center; }
+.sl { font-family: monospace; font-size: 8px; letter-spacing: .15em; color: #b8c9d4; text-transform: uppercase; display: block; text-align: center; }
+.sdiv { width: 1px; height: 20px; background: rgba(245,237,224,.1); }
+</style>
 </head>
 <body>
-
-<canvas id="bg-canvas"></canvas>
-<div class="grain"></div>
-
 <div id="app">
+  <canvas id="bg"></canvas>
 
-  <!-- ══ HOME SCREEN ══ -->
-  <div class="screen active" id="screen-home">
-    <div class="logo-mark">Respira ·°</div>
-    <h1 class="title">Respira</h1>
-    <p class="tagline">Due minuti.<br>Un respiro.<br>Tutto il resto può aspettare.</p>
-    <div class="techniques">
-      <div class="tech-card" tabindex="0" data-technique="box" role="button" aria-label="Avvia Box Breathing">
-        <div class="tech-name">Box Breathing</div>
-        <div class="tech-desc">Equilibrio e calma</div>
-        <div class="tech-time">4 min · 6 cicli</div>
+  <!-- HOME -->
+  <div class="screen on" id="s0">
+    <div class="logo">Respira ·°</div>
+    <h1>Respira</h1>
+    <p class="sub">Due minuti.<br>Un respiro.<br>Tutto il resto può aspettare.</p>
+    <div class="cards">
+      <div class="card" onclick="openTech('box')">
+        <div class="cn">Box Breathing</div>
+        <div class="cd">Equilibrio e calma</div>
+        <div class="ct">4 min · 6 cicli</div>
       </div>
-      <div class="tech-card" tabindex="0" data-technique="478" role="button" aria-label="Avvia 4-7-8 Breathing">
-        <div class="tech-name">4 · 7 · 8</div>
-        <div class="tech-desc">Sonno e rilassamento</div>
-        <div class="tech-time">3 min · 4 cicli</div>
+      <div class="card" onclick="openTech('478')">
+        <div class="cn">4 · 7 · 8</div>
+        <div class="cd">Sonno e rilassamento</div>
+        <div class="ct">3 min · 4 cicli</div>
       </div>
-      <div class="tech-card" tabindex="0" data-technique="coherence" role="button" aria-label="Avvia Coerenza Cardiaca">
-        <div class="tech-name">Coerenza cardiaca</div>
-        <div class="tech-desc">HRV &amp; sistema nervoso</div>
-        <div class="tech-time">5 min · 25 cicli</div>
+      <div class="card" onclick="openTech('coh')">
+        <div class="cn">Coerenza cardiaca</div>
+        <div class="cd">HRV &amp; sistema nervoso</div>
+        <div class="ct">5 min · 25 cicli</div>
       </div>
     </div>
   </div>
 
-  <!-- ══ BREATH SCREEN ══ -->
-  <div class="screen" id="screen-breath">
-    <div class="breath-header">
-      <div class="breath-technique-name" id="breath-technique-label">Box Breathing</div>
-      <div class="breath-rounds-info" id="breath-rounds-info">Ciclo 1 di 6</div>
+  <!-- BREATH -->
+  <div class="screen" id="s1">
+    <div class="bhead">
+      <div class="btname" id="btname">—</div>
+      <div class="brinfo" id="brinfo">Ciclo 1 di 6</div>
     </div>
-
-    <div class="circle-container" id="circle-container" role="button" aria-label="Tocca per iniziare">
-      <div class="circle-ring"></div>
-      <div class="pulse-ring" id="pulse-ring"></div>
-
-      <svg class="circle-progress-svg" viewBox="0 0 232 232" id="progress-svg" aria-hidden="true">
-        <circle class="circle-track" cx="116" cy="116" r="108"/>
-        <circle class="circle-fill" cx="116" cy="116" r="108" id="progress-arc"/>
+    <div class="cw" id="cw" onclick="onCircleClick()">
+      <div class="cring"></div>
+      <div class="pring"></div>
+      <svg class="csvg" viewBox="0 0 246 246">
+        <circle class="ctrack" cx="123" cy="123" r="114"/>
+        <circle class="carc"   cx="123" cy="123" r="114" id="carc"/>
       </svg>
-
-      <div class="circle-glow" id="circle-glow"></div>
-      <div class="circle-inner" id="circle-inner">
-        <div class="breath-phase" id="breath-phase">Pronto?</div>
-        <div class="breath-count" id="breath-count">·</div>
-        <div class="breath-unit" id="breath-unit">TOCCA PER INIZIARE</div>
+      <div class="cglow" id="cglow"></div>
+      <div class="ci" id="ci">
+        <div class="bphase" id="bphase">Pronto?</div>
+        <div class="bcount" id="bcount">·</div>
+        <div class="bunit"  id="bunit">TOCCA PER INIZIARE</div>
       </div>
     </div>
-
-    <div class="controls">
-      <button class="btn-ghost" id="btn-back-home">← Esci</button>
-      <button class="btn-primary" id="btn-start">Inizia</button>
+    <div class="ctrls">
+      <button class="bgh" onclick="onBack()">← Esci</button>
+      <button class="bpr" id="bstart" onclick="onStartClick()">Inizia</button>
     </div>
   </div>
 
-  <!-- ══ COMPLETE SCREEN ══ -->
-  <div class="screen" id="screen-complete">
-    <div class="complete-icon" id="complete-icon">✦</div>
-    <h2 class="complete-title">Ben fatto.</h2>
-    <p class="complete-msg" id="complete-msg">Il tuo sistema nervoso ti ringrazia.</p>
-    <p class="complete-science" id="complete-science"></p>
-    <div class="complete-actions">
-      <button class="btn-ghost" id="btn-home-from-complete">↩ Home</button>
-      <button class="btn-primary" id="btn-repeat">Ripeti</button>
+  <!-- COMPLETE -->
+  <div class="screen" id="s2">
+    <div class="dstar">✦</div>
+    <h2 class="dtitle">Ben fatto.</h2>
+    <p class="dmsg" id="dmsg"></p>
+    <p class="dsci" id="dsci"></p>
+    <div class="dacts">
+      <button class="bgh" onclick="go('s0')">↩ Home</button>
+      <button class="bpr" onclick="onRepeat()">Ripeti</button>
     </div>
   </div>
 
-</div>
-
-<!-- Stats bar -->
-<div class="stats-bar" id="stats-bar" role="status" aria-live="polite">
-  <div class="stat-item">
-    <div class="stat-value" id="stat-today">0</div>
-    <div class="stat-label">Oggi</div>
-  </div>
-  <div class="stat-divider"></div>
-  <div class="stat-item">
-    <div class="stat-value" id="stat-streak">0</div>
-    <div class="stat-label">Giorni</div>
-  </div>
-  <div class="stat-divider"></div>
-  <div class="stat-item">
-    <div class="stat-value" id="stat-total">0</div>
-    <div class="stat-label">Totale</div>
+  <!-- Stats bar -->
+  <div class="sbar">
+    <div><span class="sv" id="stod">0</span><span class="sl">Oggi</span></div>
+    <div class="sdiv"></div>
+    <div><span class="sv" id="sstr">0</span><span class="sl">Giorni</span></div>
+    <div class="sdiv"></div>
+    <div><span class="sv" id="stot">0</span><span class="sl">Totale</span></div>
   </div>
 </div>
 
-<!-- PWA Install Banner -->
-<div class="install-banner" id="install-banner" role="banner">
+<script>
+// ── TECNICHE ──────────────────────────────────
+var TECH = {
+  box: {
+    name: 'Box Breathing', rounds: 6,
+    phases: [
+      {n:'Inspira', d:4, t:'inhale'},
+      {n:'Trattieni', d:4, t:'hold'},
+      {n:'Espira', d:4, t:'exhale'},
+      {n:'Trattieni', d:4, t:'hold2'}
+    ],
+    msg: 'La tua frequenza cardiaca è più regolare ora.',
+    sci: 'Il Box Breathing abbassa il cortisolo e attiva il nervo vago.'
+  },
+  '478': {
+    name: '4 · 7 · 8', rounds: 4,
+    phases: [
+      {n:'Inspira', d:4, t:'inhale'},
+      {n:'Trattieni', d:7, t:'hold'},
+      {n:'Espira', d:8, t:'exhale'}
+    ],
+    msg: 'Il tuo cortisolo si è abbassato. Dormirai meglio.',
+    sci: "Il 4-7-8 amplifica l'effetto calmante del GABA."
+  },
+  coh: {
+    name: 'Coerenza Cardiaca', rounds: 25,
+    phases: [
+      {n:'Inspira', d:5, t:'inhale'},
+      {n:'Espira',  d:5, t:'exhale'}
+    ],
+    msg: 'La tua variabilità cardiaca è migliorata.',
+    sci: 'La coerenza cardiaca a 5s/fase massimizza HRV e resilienza emotiva.'
+  }
+};
+
+// ── STATO ─────────────────────────────────────
+var curTech = null;
+var isRunning = false;
+var phaseIdx = 0;
+var roundIdx = 1;
+var phaseTimer = null;
+var btnState = 'idle'; // 'idle' | 'running' | 'paused'
+
+var CIRC = 2 * Math.PI * 114;
+
+// ── SCHERMO ───────────────────────────────────
+function go(id) {
+  var screens = document.querySelectorAll('.screen');
+  for (var i = 0; i < screens.length; i++) {
+    screens[i].classList.remove('on');
+  }
+  document.getElementById(id).classList.add('on');
+}
+
+// ── EVENTS DAI BOTTONI (onclick nell'HTML) ─────
+function onStartClick() {
+  if (btnState === 'idle') {
+    startBreathing();
+  } else if (btnState === 'running') {
+    pauseBreathing();
+  } else if (btnState === 'paused') {
+    resumeBreathing();
+  }
+}
+
+function onBack() {
+  stopAll();
+  go('s0');
+}
+
+function onCircleClick() {
+  if (btnState === 'idle' && curTech !== null) {
+    startBreathing();
+  }
+}
+
+function onRepeat() {
+  resetBreathScreen();
+  go('s1');
+}
+
+// ── LOGICA RESPIRAZIONE ────────────────────────
+function openTech(key) {
+  curTech = key;
+  stopAll();
+  resetBreathScreen();
+  go('s1');
+}
+
+function resetBreathScreen() {
+  var tk = TECH[curTech];
+  document.getElementById('btname').textContent = tk.name;
+  document.getElementById('brinfo').textContent = 'Ciclo 1 di ' + tk.rounds;
+  document.getElementById('bphase').textContent = 'Pronto?';
+  document.getElementById('bcount').textContent = '·';
+  document.getElementById('bunit').textContent  = 'TOCCA PER INIZIARE';
+  document.getElementById('bstart').textContent = 'Inizia';
+  btnState = 'idle';
+  phaseIdx = 0;
+  roundIdx = 1;
+  resetVis();
+}
+
+function startBreathing() {
+  isRunning = true;
+  btnState = 'running';
+  document.getElementById('bstart').textContent = 'Pausa';
+  phaseIdx = 0;
+  roundIdx = 1;
+  runPhase();
+}
+
+function pauseBreathing() {
+  isRunning = false;
+  btnState = 'paused';
+  clearInterval(phaseTimer);
+  document.getElementById('bstart').textContent = 'Riprendi';
+  document.getElementById('bphase').textContent = 'In pausa';
+  resetVis();
+}
+
+function resumeBreathing() {
+  isRunning = true;
+  btnState = 'running';
+  document.getElementById('bstart').textContent = 'Pausa';
+  runPhase();
+}
+
+function stopAll() {
+  isRunning = false;
+  btnState = 'idle';
+  clearInterval(phaseTimer);
+  resetVis();
+}
+
+function runPhase() {
+  if (!isRunning) return;
+  var tk = TECH[curTech];
+  var ph = tk.phases[phaseIdx];
+
+  document.getElementById('bphase').textContent = ph.n;
+  document.getElementById('bcount').textContent = ph.d;
+  document.getElementById('bunit').textContent  = 'SECONDI';
+  document.getElementById('brinfo').textContent = 'Ciclo ' + roundIdx + ' di ' + tk.rounds;
+
+  applyPhaseVis(ph.t);
+  if (navigator.vibrate) {
+    if (ph.t === 'inhale') navigator.vibrate([30]);
+    else if (ph.t === 'exhale') navigator.vibrate([20, 15, 20]);
+  }
+
+  var elapsed = 0;
+  clearInterval(phaseTimer);
+  phaseTimer = setInterval(function() {
+    if (!isRunning) { clearInterval(phaseTimer); return; }
+    elapsed += 0.05;
+    var rem = Math.max(0, Math.ceil(ph.d - elapsed));
+    var el = document.getElementById('bcount');
+    if (parseInt(el.textContent) !== rem) el.textContent = rem;
+    setArc(elapsed / ph.d);
+    if (elapsed >= ph.d) {
+      clearInterval(phaseTimer);
+      nextPhase();
+    }
+  }, 50);
+}
+
+function nextPhase() {
+  var tk = TECH[curTech];
+  phaseIdx++;
+  if (phaseIdx >= tk.phases.length) {
+    phaseIdx = 0;
+    roundIdx++;
+    if (roundIdx > tk.rounds) {
+      finishSession();
+      return;
+    }
+  }
+  runPhase();
+}
+
+function finishSession() {
+  stopAll();
+  recordSession();
+  var tk = TECH[curTech];
+  document.getElementById('dmsg').textContent = tk.msg;
+  document.getElementById('dsci').textContent = tk.sci;
+  if (navigator.vibrate) navigator.vibrate([40, 25, 40, 25, 60]);
+  go('s2');
+}
+
+// ── VISUALS ───────────────────────────────────
+var PCOLS = { inhale:'#c4845a', hold:'#8ab4c2', hold2:'#8ab4c2', exhale:'#7a9e7e' };
+var PGLOWS = {
+  inhale: 'radial-gradient(ellipse, rgba(196,132,90,.18) 30%, rgba(196,132,90,0) 80%)',
+  hold:   'radial-gradient(ellipse, rgba(138,180,194,.12) 30%, rgba(138,180,194,0) 80%)',
+  hold2:  'radial-gradient(ellipse, rgba(138,180,194,.1) 30%, rgba(138,180,194,0) 80%)',
+  exhale: 'radial-gradient(ellipse, rgba(122,158,126,.15) 30%, rgba(122,158,126,0) 80%)'
+};
+var bTarget = 1;
+
+function applyPhaseVis(type) {
+  document.getElementById('ci').className = 'ci ' + type;
+  document.getElementById('cglow').style.background = PGLOWS[type] || '';
+  setArc(0, PCOLS[type] || '#c4845a');
+  bTarget = type === 'inhale' ? 1.1 : type === 'exhale' ? 0.95 : 1.05;
+}
+
+function resetVis() {
+  document.getElementById('ci').className = 'ci';
+  document.getElementById('cglow').style.background = '';
+  setArc(0, '#c4845a');
+  bTarget = 1;
+}
+
+function setArc(pct, color) {
+  var a = document.getElementById('carc');
+  a.style.strokeDasharray  = CIRC;
+  a.style.strokeDashoffset = CIRC * (1 - Math.min(pct, 1));
+  if (color) a.style.stroke = color;
+}
+
+// ── STATS ─────────────────────────────────────
+function loadStats() {
+  try { return JSON.parse(localStorage.getItem('r_v3') || '{}'); }
+  catch(e) { return {}; }
+}
+function saveStats(s) {
+  try { localStorage.setItem('r_v3', JSON.stringify(s)); } catch(e) {}
+}
+function recordSession() {
+  var s = loadStats();
+  var today = new Date().toDateString();
+  if (s.ld !== today) { s.tod = 0; s.ld = today; }
+  s.tod = (s.tod || 0) + 1;
+  s.tot = (s.tot || 0) + 1;
+  var diff = s.ls ? Math.floor((new Date() - new Date(s.ls)) / 86400000) : null;
+  s.str = (diff === 1) ? (s.str || 0) + 1 : 1;
+  s.ls = today;
+  saveStats(s);
+  refreshStats();
+}
+function refreshStats() {
+  var s = loadStats();
+  var today = new Date().toDateString();
+  document.getElementById('stod').textContent = (s.ld === today) ? (s.tod || 0) : 0;
+  document.getElementById('sstr').textContent = s.str || 0;
+  document.getElementById('stot').textContent = s.tot || 0;
+}
+
+// ── AURORA CANVAS ─────────────────────────────
+var cv = document.getElementById('bg');
+var ctx = cv.getContext('2d');
+var W, H;
+var bScale = 1;
+
+var ORBS = [
+  {fx:.15, fy:.25, fr:.55, c:[196,132,90],  s:.0003,  p:0  },
+  {fx:.80, fy:.70, fr:.40, c:[122,158,126], s:.0002,  p:2.1},
+  {fx:.50, fy:.50, fr:.35, c:[138,180,194], s:.00015, p:4.2}
+];
+
+function resizeCv() {
+  var app = document.getElementById('app');
+  W = cv.width  = app.offsetWidth  || 400;
+  H = cv.height = app.offsetHeight || 600;
+}
+
+function drawBg(t) {
+  ctx.fillStyle = '#1a1209';
+  ctx.fillRect(0, 0, W, H);
+  bScale += (bTarget - bScale) * 0.025;
+  for (var i = 0; i < ORBS.length; i++) {
+    var o = ORBS[i];
+    var px = W * o.fx + Math.sin(t * o.s + o.p) * W * 0.08;
+    var py = H * o.fy + Math.cos(t * o.s * 1.3 + o.p) * H * 0.06;
+    var r  = Math.min(W, H) * o.fr * bScale;
+    var g  = ctx.createRadialGradient(px, py, 0, px, py, r);
+    g.addColorStop(0, 'rgba(' + o.c + ',.14)');
+    g.addColorStop(1, 'rgba(' + o.c + ',0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(px, py, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  requestAnimationFrame(drawBg);
+}
+
+// ── INIT ──────────────────────────────────────
+resizeCv();
+window.addEventListener('resize', resizeCv);
+refreshStats();
+requestAnimationFrame(drawBg);
+</script>
+
+<div id="install-banner" style="position:fixed;top:0;left:0;right:0;background:rgba(196,132,90,.96);color:#faf4ec;font-family:monospace;font-size:11px;letter-spacing:.1em;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;z-index:100;transform:translateY(-100%);transition:transform .4s ease;">
   <span>Installa Respira per usarla offline</span>
-  <button id="btn-install">Installa</button>
+  <button id="btn-install" style="background:#faf4ec;color:#c4845a;border:none;padding:6px 14px;border-radius:2px;font-family:monospace;font-size:10px;letter-spacing:.2em;cursor:pointer;margin-left:16px;">Installa</button>
 </div>
 
-<script src="app.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  });
+}
+var deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  deferredPrompt = e;
+  setTimeout(function(){ document.getElementById('install-banner').style.transform = 'translateY(0)'; }, 5000);
+});
+document.getElementById('btn-install').addEventListener('click', function() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(function(){ deferredPrompt = null; document.getElementById('install-banner').style.transform = ''; });
+});
+</script>
 </body>
 </html>
